@@ -14,6 +14,7 @@
   <a href="https://github.com/ahmadarif-lab/camview-tv/releases/latest"><img src="https://img.shields.io/badge/Install-APK-089DA9?style=flat-square&amp;logo=android&amp;logoColor=white" alt="Install APK"></a>
   <img src="https://img.shields.io/badge/Android-7.0%2B-162B38?style=flat-square" alt="Android 7.0 or later">
   <img src="https://img.shields.io/badge/Android_TV-D--pad_ready-089DA9?style=flat-square" alt="Android TV remote support">
+  <img src="https://img.shields.io/badge/APK-842_KiB-089DA9?style=flat-square" alt="Production APK about 842 KiB">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-162B38?style=flat-square" alt="MIT license"></a>
 </p>
 
@@ -157,6 +158,9 @@ local, untracked `local.properties` with `sdk.dir=/path/to/your/android-sdk`.
 ./gradlew assembleDebug lintDebug
 # app/build/outputs/apk/debug/app-debug.apk
 ```
+
+Release builds enable R8 code optimization and resource shrinking. The v0.4.1 production
+APK is about **842 KiB / 0.82 MiB**, 77.5% smaller than v0.4.0, with the same features.
 
 The Gradle wrapper is included. Debug APKs are signed automatically with your local Android
 debug key and are suitable for trying the app. Official release APKs are built locally and

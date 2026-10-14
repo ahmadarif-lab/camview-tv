@@ -33,6 +33,10 @@ Properties are described in the main README. Never pass passwords as command-lin
    APK must not be signed by `CN=Android Debug`. Confirm that debug preview activities are
    absent from the release APK.
 
+   Release builds use R8 optimization and resource shrinking. Archive
+   `app/build/outputs/mapping/release/mapping.txt` per version outside Git before another release
+   build overwrites it. This mapping lets you retrace obfuscated crash reports.
+
 4. Prepare the public files:
 
    ```sh
