@@ -1,0 +1,88 @@
+name: Signed release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish a Release (run on a matching version tag; main builds artifacts only)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: signed-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'ahmadarif-lab/camview-tv' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: write
+    env:
+      PUBLISH_RELEASE: ${{ github.event_name == 'push' || inputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate version and source
+        id: version
+        run: python3 tools/ci/check_release_version.py
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: true
+      - name: Prepare private signing files
+        env:
+          CAMVIEW_KEYSTORE_BASE64: ${{ secrets.CAMVIEW_KEYSTORE_BASE64 }}
+          CAMVIEW_STORE_PASSWORD: ${{ secrets.CAMVIEW_STORE_PASSWORD }}
+          CAMVIEW_KEY_ALIAS: ${{ secrets.CAMVIEW_KEY_ALIAS }}
+          CAMVIEW_KEY_PASSWORD: ${{ secrets.CAMVIEW_KEY_PASSWORD }}
+        run: python3 tools/ci/prepare_signing.py
+      - name: Build and lint production release
+        run: >-
+          ./gradlew -PsigningProperties="$RUNNER_TEMP/camview-signing/key.properties"
+          assembleRelease lintRelease --no-daemon --no-configuration-cache --console=plain
+      - name: Remove private signing files
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/camview-signing"
+      - name: Verify signer and package public files
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: python3 tools/ci/package_release.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: CamView-TV-production
+          if-no-files-found: error
+          path: |
+            dist/CamView-TV.apk
+            dist/SHA256SUMS
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: R8-mapping-${{ steps.version.outputs.tag }}
+          path: app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+      - name: Publish GitHub Release
+        if: env.PUBLISH_RELEASE == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh release create "$RELEASE_TAG" dist/CamView-TV.apk dist/SHA256SUMS \
+            --verify-tag --title "CamView TV $RELEASE_TAG" --generate-notes \
+            --notes-file dist/release-notes.md

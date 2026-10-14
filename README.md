@@ -163,12 +163,14 @@ Release builds enable R8 code optimization and resource shrinking. The v0.4.1 pr
 APK is about **842 KiB / 0.82 MiB**, 77.5% smaller than v0.4.0, with the same features.
 
 The Gradle wrapper is included. Debug APKs are signed automatically with your local Android
-debug key and are suitable for trying the app. Official release APKs are built locally and
-signed with a dedicated production key; GitHub receives the APK, not the private key.
+debug key and are suitable for trying the app. Official releases are built and signed by
+GitHub Actions with the same dedicated production key. Local signed builds remain supported.
 
 ### Production signing
 
-The private keystore and passwords live outside this repository. To sign your own release,
+The private keystore is backed up outside the checkout and stored with its passwords as
+GitHub **environment secrets** for the `production` environment. Private material is never
+committed or attached to a Release. To sign your own release locally,
 create an untracked `key.properties` in the project root, or pass an external file with
 `-PsigningProperties=/path/to/private/key.properties`:
 
@@ -202,9 +204,17 @@ release notes verifies the download; the certificate fingerprint identifies its 
 Production APKs cannot update a debug installation with a different signing key; switching
 requires uninstalling the debug app, which removes its locally saved cameras.
 
-GitHub Actions builds and lints debug and unsigned release variants without access to
-production signing material. CI debug artifacts are development builds. See
-[Release guide](docs/RELEASING.md) for the local signing and publishing process.
+GitHub Actions uses two workflows:
+
+- **Android build** validates branch pushes and pull requests with debug/unsigned builds and lint;
+  it does not access production signing secrets. Its debug APK is a development artifact.
+- **Signed release** builds, lints and verifies a production-signed APK when a `vX.Y.Z` tag is
+  pushed, then publishes the APK and checksum to GitHub Releases. The tag must match the app
+  version and point to a commit on `main`.
+- You can run **Signed release** manually on `main` with `publish=false` to download a signed
+  artifact without creating a Release. Manual publishing requires the matching version tag.
+
+See [Release guide](docs/RELEASING.md) for secret setup, tagging and local signing.
 
 ### Project layout
 
