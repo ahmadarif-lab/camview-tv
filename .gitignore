@@ -1,0 +1,31 @@
+# Machine-local Android/Gradle state
+.gradle/
+.kotlin/
+local.properties
+**/build/
+.idea/
+*.iml
+.DS_Store
+
+# Private signing material and credentials
+*.jks
+*.keystore
+*.p12
+*.pem
+key.properties
+keystore.properties
+.env
+.env.*
+!.env.example
+
+# Generated packages, captures and private investigation artifacts
+*.apk
+*.aab
+*.apks
+*.xapk
+dist/
+captures/
+analysis/
+NOTES.md
+__pycache__/
+*.pyc
