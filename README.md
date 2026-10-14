@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="#install"><img src="https://img.shields.io/badge/Install-APK-089DA9?style=flat-square&amp;logo=android&amp;logoColor=white" alt="Install APK"></a>
+  <a href="https://github.com/ahmadarif-lab/camview-tv/releases/latest"><img src="https://img.shields.io/badge/Install-APK-089DA9?style=flat-square&amp;logo=android&amp;logoColor=white" alt="Install APK"></a>
   <img src="https://img.shields.io/badge/Android-7.0%2B-162B38?style=flat-square" alt="Android 7.0 or later">
   <img src="https://img.shields.io/badge/Android_TV-D--pad_ready-089DA9?style=flat-square" alt="Android TV remote support">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-162B38?style=flat-square" alt="MIT license"></a>
@@ -66,11 +66,11 @@ All documentation images are WebP.
 Requires **Android 7.0 / API 24 or later**. Designed for Android TV / Google TV in landscape
 with a D-pad remote. The TV and cameras need to be on the same reachable local network.
 
-Download `CamView-TV.apk` from this repository's **Releases** page when a release is available,
+Download `CamView-TV.apk` from the [latest release](https://github.com/ahmadarif-lab/camview-tv/releases/latest),
 copy it to your TV and open it with a file manager. Android may ask you to allow installation
 from that file manager. Open **CamView TV** from your TV's apps list.
 
-If no APK has been published yet, use [Build](#build) below.
+You can also [build the app locally](#build).
 
 ### Install with ADB
 
@@ -159,17 +159,48 @@ local, untracked `local.properties` with `sdk.dir=/path/to/your/android-sdk`.
 ```
 
 The Gradle wrapper is included. Debug APKs are signed automatically with your local Android
-debug key and are suitable for trying the app. For distribution, build a release APK and sign
-it using your own private key; keep that key for future updates:
+debug key and are suitable for trying the app. Official release APKs are built locally and
+signed with a dedicated production key; GitHub receives the APK, not the private key.
 
-```sh
-./gradlew assembleRelease
-# app/build/outputs/apk/release/app-release-unsigned.apk
+### Production signing
+
+The private keystore and passwords live outside this repository. To sign your own release,
+create an untracked `key.properties` in the project root, or pass an external file with
+`-PsigningProperties=/path/to/private/key.properties`:
+
+```properties
+storeFile=/absolute/path/to/your-release.jks
+storePassword=YOUR_STORE_PASSWORD
+keyAlias=YOUR_KEY_ALIAS
+keyPassword=YOUR_KEY_PASSWORD
 ```
 
-Keep signing keys, keystore passwords and camera credentials outside the repository. This
-repository does not contain a release signing key or a prebuilt APK; downloadable builds
-belong in GitHub Releases.
+```sh
+./gradlew assembleRelease lintRelease
+# With signing configured: app/build/outputs/apk/release/app-release.apk
+# Without signing configured: app/build/outputs/apk/release/app-release-unsigned.apk
+```
+
+An explicitly requested but missing properties file, incomplete properties or a missing
+keystore fail the build. An unsigned release is never automatically signed with a debug key.
+Keep your key and passwords backed up together; updates must use the same signing key.
+
+The official certificate's SHA-256 fingerprint is in
+[docs/signing-certificate.sha256](docs/signing-certificate.sha256). Verify a downloaded APK
+with Android SDK build tools:
+
+```sh
+apksigner verify --verbose --print-certs CamView-TV.apk
+```
+
+The `Signer #1 certificate SHA-256 digest` must match that file. The APK file checksum in
+release notes verifies the download; the certificate fingerprint identifies its signer.
+Production APKs cannot update a debug installation with a different signing key; switching
+requires uninstalling the debug app, which removes its locally saved cameras.
+
+GitHub Actions builds and lints debug and unsigned release variants without access to
+production signing material. CI debug artifacts are development builds. See
+[Release guide](docs/RELEASING.md) for the local signing and publishing process.
 
 ### Project layout
 

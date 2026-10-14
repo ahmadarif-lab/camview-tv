@@ -1,5 +1,24 @@
 plugins { id 'com.android.application' }
 
+def signingProperties = new Properties()
+def signingPropertiesFile = rootProject.file(
+    providers.gradleProperty('signingProperties').getOrElse('key.properties'))
+def hasProductionSigning = signingPropertiesFile.isFile()
+if (providers.gradleProperty('signingProperties').isPresent() && !hasProductionSigning) {
+    throw new GradleException('The requested signing properties file does not exist.')
+}
+if (hasProductionSigning) {
+    signingPropertiesFile.withInputStream { signingProperties.load(it) }
+    ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'].each { name ->
+        if (!signingProperties.getProperty(name)?.trim()) {
+            throw new GradleException("Missing production signing property: ${name}")
+        }
+    }
+    if (!rootProject.file(signingProperties.getProperty('storeFile')).isFile()) {
+        throw new GradleException('The production signing keystore does not exist.')
+    }
+}
+
 android {
     namespace 'id.my.bontot.camviewtv'
     compileSdk 35
@@ -14,8 +33,21 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+    signingConfigs {
+        if (hasProductionSigning) {
+            production {
+                storeFile rootProject.file(signingProperties.getProperty('storeFile'))
+                storePassword signingProperties.getProperty('storePassword')
+                keyAlias signingProperties.getProperty('keyAlias')
+                keyPassword signingProperties.getProperty('keyPassword')
+            }
+        }
+    }
     buildTypes {
-        release { minifyEnabled false }
+        release {
+            minifyEnabled false
+            if (hasProductionSigning) signingConfig signingConfigs.production
+        }
     }
 }
 
